@@ -1,4 +1,7 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+// Edge Function: movie_details (CORS aberto)
+// Uso: GET ?tmdb_id=XXXX
+
+const TMDB = "https://api.themoviedb.org/3";
 
 function corsHeaders() {
   return {
@@ -9,83 +12,73 @@ function corsHeaders() {
   };
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders() });
   }
 
   try {
-    const { tmdb_id } = await req.json().catch(() => ({}));
-    if (!tmdb_id) {
-      return new Response(JSON.stringify({ error: "tmdb_id is required" }), {
-        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders }
-      });
-    }
-
-    const apiKey = Deno.env.get("TMDB_API_KEY");
+    const apiKey = Deno.env.get("TMDB_KEY") || Deno.env.get("TMDB_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "TMDB_API_KEY not set" }), {
-        status: 500, headers: { "Content-Type": "application/json", ...corsHeaders }
+      return new Response(JSON.stringify({ error: "TMDB_KEY ausente nas secrets" }), {
+        status: 500, headers: { "Content-Type": "application/json", ...corsHeaders() },
       });
     }
 
-    // detalhes + vídeos + classificações
-    const params = new URLSearchParams({
-      api_key: apiKey,
-      language: "pt-BR",
-      append_to_response: "videos,release_dates",
-      include_video_language: "pt-BR,en-US",
-    });
-
-    const r = await fetch(`https://api.themoviedb.org/3/movie/${tmdb_id}?${params.toString()}`);
-    if (!r.ok) {
-      const txt = await r.text();
-      return new Response(JSON.stringify({ error: `TMDb ${r.status}: ${txt}` }), {
-        status: 502, headers: { "Content-Type": "application/json", ...corsHeaders }
+    const u = new URL(req.url);
+    const tmdbId = Number(u.searchParams.get("tmdb_id") || "0");
+    if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
+      return new Response(JSON.stringify({ error: "tmdb_id inválido" }), {
+        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() },
       });
     }
-    const data = await r.json();
 
-    const overview = data?.overview ?? "";
-    const runtime = data?.runtime ?? null;
-    const genres = Array.isArray(data?.genres) ? data.genres.map((g: any) => ({ id: g.id, name: g.name })) : [];
-    const backdrop_url = data?.backdrop_path ? `https://image.tmdb.org/t/p/w780${data.backdrop_path}` : null;
-    const vote_average = typeof data?.vote_average === "number" ? data.vote_average : null;
-    const vote_count = typeof data?.vote_count === "number" ? data.vote_count : null;
+    // 1) detalhes gerais
+    const detailsUrl = `${TMDB}/movie/${tmdbId}?api_key=${apiKey}&language=pt-BR`;
+    const detailsRes = await fetch(detailsUrl);
+    if (!detailsRes.ok) throw new Error(`TMDB details ${detailsRes.status}: ${await detailsRes.text()}`);
+    const details = await detailsRes.json();
 
-    // escolher trailer do YouTube
-    let trailer: { site: string; key: string; name: string } | null = null;
-    const vids = (data?.videos?.results ?? []).filter((v: any) => v.site === "YouTube");
-    trailer =
-      vids.find((v: any) => v.type === "Trailer" && v.official) ||
-      vids.find((v: any) => v.type === "Trailer") ||
-      vids.find((v: any) => v.type === "Teaser") ||
-      null;
+    // 2) vídeos (trailer)
+    const vidsUrl = `${TMDB}/movie/${tmdbId}/videos?api_key=${apiKey}&language=pt-BR`;
+    const vidsRes = await fetch(vidsUrl);
+    const vids = vidsRes.ok ? await vidsRes.json() : { results: [] as any[] };
+    const yt = (vids.results ?? []).find((v: any) => v.site === "YouTube" && v.type === "Trailer");
+    const trailer = yt ? { site: "YouTube", key: String(yt.key) } : null;
 
-    // classificação indicativa (BR prioritário, senão US)
-    let age_rating: string | null = null;
-    try {
-      const results = data?.release_dates?.results ?? [];
-      const pick = (cc: string) => {
-        const c = results.find((r: any) => r.iso_3166_1 === cc);
-        if (!c) return null;
-        const arr = c.release_dates || [];
-        // Preferir tipo 3 (theatrical) com certification não-vazio, senão qualquer não-vazio
-        const best = arr.find((d: any) => d.type === 3 && d.certification) || arr.find((d: any) => d.certification);
-        return best?.certification || null;
+    // 3) classificação etária (tenta BR, senão US)
+    const relUrl = `${TMDB}/movie/${tmdbId}/release_dates?api_key=${apiKey}`;
+    const relRes = await fetch(relUrl);
+    let age = "";
+    if (relRes.ok) {
+      const rel = await relRes.json();
+      const findCert = (cc: string) => {
+        const entry = (rel.results ?? []).find((r: any) => r.iso_3166_1 === cc);
+        const cert  = entry?.release_dates?.find((d: any) => d.certification)?.certification ?? "";
+        return String(cert ?? "");
       };
-      age_rating = pick("BR") || pick("US") || null;
-    } catch { /* ignore */ }
+      age = findCert("BR") || findCert("US") || "";
+    }
 
-    return new Response(JSON.stringify({
-      overview, runtime, genres, backdrop_url, trailer, vote_average, vote_count, age_rating
-    }), {
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+    const out = {
+      vote_average: typeof details.vote_average === "number" ? details.vote_average : undefined,
+      runtime:      typeof details.runtime === "number" ? details.runtime : undefined,
+      overview:     typeof details.overview === "string" ? details.overview : "",
+      genres:       Array.isArray(details.genres) ? details.genres.map((g: any) => ({ id: g.id, name: g.name })) : [],
+      age_rating:   age,
+      trailer,
+    };
+
+    return new Response(JSON.stringify(out), {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=600, s-maxage=1800",
+        ...corsHeaders(),
+      },
     });
-  } catch (e) {
-    console.error(e);
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500, headers: { "Content-Type": "application/json", ...corsHeaders }
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), {
+      status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() },
     });
   }
 });
