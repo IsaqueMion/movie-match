@@ -22,7 +22,9 @@ export default function MovieCarousel({ title, year, poster_url, details, fullHe
   }, [hasTrailer])
 
   const [slide, setSlide] = useState(0)
-  useEffect(() => { if (slide > slides.length - 1) setSlide(0) }, [slides.length, slide])
+  useEffect(() => {
+    if (slide > slides.length - 1) setSlide(0)
+  }, [slides.length, slide])
 
   const next = () => setSlide((s) => (s + 1) % slides.length)
   const prev = () => setSlide((s) => (s - 1 + slides.length) % slides.length)
@@ -32,7 +34,7 @@ export default function MovieCarousel({ title, year, poster_url, details, fullHe
 
   return (
     <div className="w-full h-full select-none">
-      <div className="relative h-full overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5">
+      <div className="relative isolate h-full overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5">
         <div className={`relative h-full ${fullHeight ? '' : 'min-h-[520px]'} bg-neutral-950 text-white`}>
 
           {/* Poster */}
@@ -81,7 +83,8 @@ export default function MovieCarousel({ title, year, poster_url, details, fullHe
               <div className="w-full max-w-sm mx-auto bg-white text-gray-900 p-4 rounded-xl shadow-lg">
                 <h3 className="font-semibold text-lg">{title}{year ? ` (${year})` : ''}</h3>
                 <div className="mt-0.5 text-sm text-gray-600">
-                  {details?.runtime ? `${details.runtime} min` : '—'}{details?.genres?.length ? ` • ${details.genres.map(g => g.name).join(' • ')}` : ''}
+                  {details?.runtime ? `${details.runtime} min` : '—'}
+                  {details?.genres?.length ? ` • ${details.genres.map(g => g.name).join(' • ')}` : ''}
                 </div>
                 <div className="mt-3 text-sm leading-relaxed max-h-64 overflow-y-auto pr-1">
                   {details?.overview || <Skeleton>Carregando sinopse…</Skeleton>}
@@ -90,17 +93,17 @@ export default function MovieCarousel({ title, year, poster_url, details, fullHe
             </div>
           </FadeSlide>
 
-          {/* setas */}
+          {/* setas (sempre acima) */}
           {slides.length > 1 && (
             <>
               <button
                 onClick={prev}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-white/15 hover:bg-white/25 transition px-3 py-2 rounded-full backdrop-blur"
+                className="pointer-events-auto absolute left-3 top-1/2 -translate-y-1/2 z-40 bg-white/15 hover:bg-white/25 transition px-3 py-2 rounded-full backdrop-blur"
                 aria-label="Anterior"
               >‹</button>
               <button
                 onClick={next}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-white/15 hover:bg-white/25 transition px-3 py-2 rounded-full backdrop-blur"
+                className="pointer-events-auto absolute right-3 top-1/2 -translate-y-1/2 z-40 bg-white/15 hover:bg-white/25 transition px-3 py-2 rounded-full backdrop-blur"
                 aria-label="Próximo"
               >›</button>
             </>
@@ -108,7 +111,7 @@ export default function MovieCarousel({ title, year, poster_url, details, fullHe
 
           {/* dots (esconde no trailer) */}
           {slides.length > 1 && slideKey !== 'trailer' && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex gap-2 bg-black/20 rounded-full px-2 py-1 backdrop-blur">
+            <div className="pointer-events-auto absolute bottom-2 left-1/2 -translate-x-1/2 z-40 flex gap-2 bg-black/20 rounded-full px-2 py-1 backdrop-blur">
               {slides.map((s, idx) => (
                 <button
                   key={s.key}
@@ -128,8 +131,8 @@ export default function MovieCarousel({ title, year, poster_url, details, fullHe
 function FadeSlide({ visible, children }: { visible: boolean, children: React.ReactNode }) {
   return (
     <div
-      className={`absolute inset-0 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-      style={{ zIndex: visible ? 1 : 0 }}
+      className="absolute inset-0 transition-opacity duration-300"
+      style={{ opacity: visible ? 1 : 0, zIndex: visible ? 10 : 0, pointerEvents: visible ? 'auto' as const : 'none' as const }}
     >
       {children}
     </div>
