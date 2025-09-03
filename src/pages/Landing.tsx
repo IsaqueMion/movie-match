@@ -18,8 +18,6 @@ export default function Landing() {
           .slice(0, 8)
           .map(r => ({ title: r.title, year: r.year, poster_url: r.poster_url! }))
         setItems(pick)
-      } catch (e) {
-        console.error('landing discover error', e)
       } finally {
         setLoading(false)
       }
@@ -45,12 +43,6 @@ export default function Landing() {
           ) : (
             <div className="h-[40vh] grid place-items-center text-white/70">Sem destaques agora.</div>
           )}
-        </section>
-
-        <section className="mt-10 text-white/80">
-          <p className="max-w-2xl">
-            Dê like/dislike em cartazes, convide amigos e veja quando todos curtirem o mesmo filme — dá match!
-          </p>
         </section>
       </div>
     </main>
