@@ -1,4 +1,10 @@
-// Edge Function: discover (CORS liberado para testes: '*' )
+// Edge Function: discover (CORS aberto para estabilizar)
+//
+// POST body:
+// { page?: number, filters?: { genres?: number[], yearMin?: number, yearMax?: number,
+//   ratingMin?: number, language?: string, sortBy?: string } }
+//
+// Retorno: { page, results: [{ movie_id, tmdb_id, title, year, poster_url, genres[] }] }
 
 type Body = {
   page?: number
@@ -15,7 +21,7 @@ type Body = {
 const TMDB = "https://api.themoviedb.org/3";
 const IMG  = "https://image.tmdb.org/t/p/w500";
 
-// CORS simples e universal (teste)
+// CORS simples (liberado)
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -26,13 +32,11 @@ function corsHeaders() {
 }
 
 Deno.serve(async (req) => {
-  // PRE-FLIGHT
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders() });
   }
 
   try {
-    // corpo (POST) ou fallback simples (GET)
     let payload: Body = { page: 1, filters: {} };
     if (req.method === "POST") {
       payload = (await req.json()) as Body;
@@ -43,16 +47,13 @@ Deno.serve(async (req) => {
 
     const { page = 1, filters = {} } = payload;
 
-    // chave TMDB via secrets
     const apiKey = Deno.env.get("TMDB_KEY") || Deno.env.get("TMDB_API_KEY");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "TMDB_KEY ausente nas secrets" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders() },
+        status: 500, headers: { "Content-Type": "application/json", ...corsHeaders() },
       });
     }
 
-    // monta query
     const p = new URLSearchParams();
     p.set("api_key", apiKey);
     p.set("page", String(page));
@@ -79,12 +80,12 @@ Deno.serve(async (req) => {
     const data = await r.json();
 
     const results = (data.results ?? []).map((m: any) => ({
-      movie_id: m.id,
-      tmdb_id:  m.id,
-      title:    m.title ?? m.name ?? "Sem título",
-      year:     m.release_date ? Number(String(m.release_date).slice(0, 4)) : null,
+      movie_id:  m.id,                // id "estável" do catálogo
+      tmdb_id:   m.id,
+      title:     m.title ?? m.name ?? "Sem título",
+      year:      m.release_date ? Number(String(m.release_date).slice(0, 4)) : null,
       poster_url: m.poster_path ? `${IMG}${m.poster_path}` : null,
-      genres:   Array.isArray(m.genre_ids) ? m.genre_ids : [],
+      genres:    Array.isArray(m.genre_ids) ? m.genre_ids : [],
     }));
 
     return new Response(JSON.stringify({ page, results }), {
@@ -96,8 +97,7 @@ Deno.serve(async (req) => {
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: String(e?.message ?? e) }), {
-      status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders() },
+      status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() },
     });
   }
 });
