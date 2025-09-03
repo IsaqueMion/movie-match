@@ -1,10 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
+
+    <!-- Pré-conexões (dentro do <head>) -->
+    <link rel="preconnect" href="https://image.tmdb.org">
+    <link rel="preconnect" href="https://www.youtube.com">
+
+    <!-- CSP: libera TMDB, Supabase (HTTP e WebSocket) e YouTube -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      img-src 'self' https://image.tmdb.org data: blob:;
+      script-src 'self';
+      style-src 'self' 'unsafe-inline';
+      frame-src https://www.youtube.com https://www.youtube-nocookie.com;
+      connect-src 'self' https://*.supabase.co https://*.supabase.in https://xpqoztrctmqqvtexiavp.functions.supabase.co wss://*.supabase.co wss://*.supabase.in;
+      font-src 'self' data:;
+    ">
+
+    <title>MovieMatch</title>
   </head>
   <body>
     <div id="root"></div>
