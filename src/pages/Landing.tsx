@@ -31,24 +31,19 @@ export default function Landing() {
   useEffect(() => {
     (async () => {
       try {
-        // pega uma página aleatória 1..5 e filtra os que têm pôster
-        const randomPage = 1 + Math.floor(Math.random() * 5)
-        const data = await discoverMovies({ page: randomPage, filters: {} })
-        const list: CarouselItem[] = (data?.results ?? [])
-          .filter((m: any) => m?.poster_url)
-          .slice(0, 12)
-          .map((m: any) => ({
-            title: m.title,
-            year: m.year ?? null,
-            poster_url: m.poster_url,
-          }))
-        if (list.length > 0) setItems(list)
+          const randomPage = 1 + Math.floor(Math.random() * 5)
+          const data = await discoverMovies({ page: randomPage, filters: {} })
+          const list = (data?.results ?? [])
+            .filter((m: any) => m?.poster_url)
+            .slice(0, 8) // menos carga
+            .map((m: any) => ({ title: m.title, year: m.year ?? null, poster_url: m.poster_url }))
+          if (list.length > 0) setItems(list)
       } catch (e) {
-        console.debug('carousel load error', e)
-      } finally {
-        setLoadingCarousel(false)
-      }
-    })()
+         console.error('discoverMovies failed:', e)
+        } finally {
+          setLoadingCarousel(false)
+        }
+      })()
   }, [])
 
   // autoplay
