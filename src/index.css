@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- Select nativo: menu sempre legível ---- */
+select[data-menu="light"] { color-scheme: light; }
+select[data-menu="light"] option { color: #111; }  /* texto escuro no menu claro */
+
+/* (Opcional) Caso um dia queira o menu nativo escuro: 
+select[data-menu="dark"] { color-scheme: dark; }
+select[data-menu="dark"] option { color: #fff; }
+*/
