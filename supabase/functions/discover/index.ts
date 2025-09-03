@@ -2,6 +2,7 @@ import './_types.d.ts'
 
 const ALLOWED_ORIGINS = new Set([
   'http://localhost:5173', // troque pelo seu domínio real
+  'https://movie-match-rf6c-woad.vercel.app/',
 ])
 
 function cors(origin: string) {
