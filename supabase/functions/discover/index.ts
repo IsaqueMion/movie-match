@@ -22,37 +22,34 @@ const TMDB = "https://api.themoviedb.org/3";
 const IMG  = "https://image.tmdb.org/t/p/w500";
 
 // CORS simples (liberado)
-function corsHeaders() {
+function cors(req: Request) {
+  const origin = req.headers.get('origin') ?? '*'
   return {
-    "Access-Control-Allow-Origin": "*",
-    "Vary": "Origin",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  };
+    'Access-Control-Allow-Origin': origin,
+    // ajuda caches/CDN a variar por origin
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  }
 }
 
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders() });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: cors(req) })
   }
 
   try {
-    let payload: Body = { page: 1, filters: {} };
-    if (req.method === "POST") {
-      payload = (await req.json()) as Body;
-    } else {
-      const u = new URL(req.url);
-      payload.page = Number(u.searchParams.get("page") ?? "1") || 1;
-    }
-
-    const { page = 1, filters = {} } = payload;
-
-    const apiKey = Deno.env.get("TMDB_KEY") || Deno.env.get("TMDB_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "TMDB_KEY ausente nas secrets" }), {
-        status: 500, headers: { "Content-Type": "application/json", ...corsHeaders() },
-      });
-    }
+    // ... sua lógica
+    return new Response(JSON.stringify({ page, results }), {
+      headers: { 'Content-Type': 'application/json', ...cors(req) },
+    })
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), {
+      status: 400, headers: { 'Content-Type': 'application/json', ...cors(req) },
+    })
+  }
+})
 
     const p = new URLSearchParams();
     p.set("api_key", apiKey);
