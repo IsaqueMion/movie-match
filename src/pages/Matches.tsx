@@ -11,7 +11,7 @@ type UIMatch = {
 
 export default function Matches() {
   const { code } = useParams()
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [, setSessionId] = useState<string | null>(null)
   const [items, setItems] = useState<UIMatch[]>([])
   const [loading, setLoading] = useState(true)
 
