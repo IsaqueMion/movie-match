@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
 
-    <!-- Pré-conexões (dentro do <head>) -->
+    <!-- Pré-conexões -->
     <link rel="preconnect" href="https://image.tmdb.org">
     <link rel="preconnect" href="https://www.youtube.com">
 
-    <!-- CSP: libera TMDB, Supabase (HTTP e WebSocket) e YouTube -->
+    <!-- CSP (produção): libera TMDB, Supabase (HTTP + WS) e YouTube -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       img-src 'self' https://image.tmdb.org data: blob:;
@@ -24,6 +24,7 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Vite troca isso por /assets/index-XXXX.js no build -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
